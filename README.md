@@ -2,7 +2,7 @@
 
 ## Overview
 
-In this example, you will create blueprints for `bitbucketProject` `bitbucketRepository` that ingests all repositories and it's associated README.md from your Bitbucket account. You will then add some Groovy script to your Jenkins pipeline to make API calls to Bitbucket REST API and fetch data for your account. 
+In this example, you will create blueprints for `bitbucketProject` `bitbucketRepository` that ingests all projects, repositories and their associated README.md from your Bitbucket account. You will then add some Groovy script to your Jenkins pipeline to make API calls to Bitbucket REST API and fetch data for your account. 
 
 
 ## Getting started
@@ -34,7 +34,6 @@ Follow these steps to get started with the Groovy template:
 <summary>Jenkins Pipeline Script</summary>
 
 ```yml showLineNumbers
-
 import groovy.json.JsonSlurper
 import groovy.json.JsonOutput
 import java.net.URLEncoder
@@ -45,10 +44,6 @@ import groovy.json.JsonSlurperClassic
 pipeline {
     agent any
 
-    environment {
-        BITBUCKET_HOST = 'http://localhost:7990' // Update with your Bitbucket host URL
-    }
-
     stages {
         stage('Get Port Access Token') {
             steps {
@@ -57,6 +52,7 @@ pipeline {
                         string(credentialsId: 'PORT_CLIENT_ID', variable: 'PORT_CLIENT_ID'),
                         string(credentialsId: 'PORT_CLIENT_SECRET', variable: 'PORT_CLIENT_SECRET')
                     ]) {
+                        // Execute the curl command and capture the output
                         def result = sh(returnStdout: true, script: """
                             accessTokenPayload=\$(curl -X POST \
                                 -H "Content-Type: application/json" \
@@ -65,6 +61,7 @@ pipeline {
                             echo \$accessTokenPayload
                         """)
 
+                        // Parse the JSON response using JsonSlurper
                         def jsonSlurper = new JsonSlurper()
                         def payloadJson = jsonSlurper.parseText(result.trim())
 
@@ -79,13 +76,29 @@ pipeline {
             steps {
                 withCredentials([
                     string(credentialsId: 'BITBUCKET_USERNAME', variable: 'BITBUCKET_USERNAME'),
-                    string(credentialsId: 'BITBUCKET_APP_PASSWORD', variable: 'BITBUCKET_APP_PASSWORD')
+                    string(credentialsId: 'BITBUCKET_APP_PASSWORD', variable: 'BITBUCKET_APP_PASSWORD'),
+                    string(credentialsId: 'BITBUCKET_HOST', variable: 'BITBUCKET_HOST')
                 ]) {
                     script {
                         def url = "${env.BITBUCKET_HOST}/rest/api/1.0/projects"
                         def allProjects = fetchPaginatedData(url)
                         
-                        println("Final All Projects: ${allProjects}")
+                        allProjects.each { project ->
+                            def entity = [
+                                identifier: project.key,
+                                title: project.name,
+                                properties: [
+                                    description: project.get("description"),
+                                    type: project.type,
+                                    public: project.public,
+                                    link: project.links.self[0].href
+                                ]
+                            ]
+                        echo "Upserting project: ${entity.identifier}"
+                        
+                        addEntityToPort("bitbucketProject", entity)
+                        
+                        }
                         env.PROJECTS_JSON = JsonOutput.toJson(allProjects)
                     
                     }
@@ -97,7 +110,8 @@ pipeline {
             steps {
                 withCredentials([
                     string(credentialsId: 'BITBUCKET_USERNAME', variable: 'BITBUCKET_USERNAME'),
-                    string(credentialsId: 'BITBUCKET_APP_PASSWORD', variable: 'BITBUCKET_APP_PASSWORD')
+                    string(credentialsId: 'BITBUCKET_APP_PASSWORD', variable: 'BITBUCKET_APP_PASSWORD'),
+                    string(credentialsId: 'BITBUCKET_HOST', variable: 'BITBUCKET_HOST')
                 ]) {
                     script {
                         def projects = env.PROJECTS_JSON
@@ -155,9 +169,9 @@ pipeline {
                     def repoEntities = jsonParser(env.REPOSITORIES_JSON)
                     echo "Processing ${repoEntities.size()} repos."
 
-                    // Example: Iterate over projects and process/send them to Port API
                     repoEntities.each { entity ->
                         echo "Processing repo: ${entity.identifier}"
+                        
                         addEntityToPort("bitbucketRepository", entity)
                     }
                 }
@@ -215,7 +229,7 @@ def fetchPaginatedData(url, def limit=25, def dataKey='values') {
     def nextPageStart = null
 
     while (true) {
-        try {
+        try{
             def params = nextPageStart ? ["start": nextPageStart, "limit": limit] : ["limit": limit]
             def paramsString = params.collect { k, v -> "${k}=${v}" }.join("&")
             def curlCommand = """
@@ -223,9 +237,7 @@ def fetchPaginatedData(url, def limit=25, def dataKey='values') {
             """
             echo "Running command: ${curlCommand}"
     
-            def response = sh(returnStdout: true, script: curlCommand)
-            println("Response: ${response}")
-    
+            def response = sh(returnStdout: true, script: curlCommand)    
             def jsonResponse = jsonParser(response)
     
             if (jsonResponse.containsKey(dataKey)) {
@@ -247,10 +259,7 @@ def fetchPaginatedData(url, def limit=25, def dataKey='values') {
     
             println("nextPageStart before update: ${nextPageStart}")
     
-            nextPageStart = jsonResponse.nextPageStart
-    
-            println("nextPageStart after update: ${nextPageStart}")
-    
+            nextPageStart = jsonResponse.nextPageStart    
             if (nextPageStart == null) {
                 break
             }
