@@ -2,7 +2,7 @@
 
 ## Overview
 
-In this example, you will create blueprints for `bitbucketProject` and `bitbucketRepository` that ingests all projects, repositories and their associated README.md from your Bitbucket account. You will then add some Groovy script to your Jenkins pipeline to make API calls to Bitbucket REST API and fetch data for your account. 
+In this example, you will create blueprints for `bitbucketProject` and `bitbucketRepository` that ingest all projects, repositories and their associated README.md from your Bitbucket account. You will then add some Groovy script to your Jenkins pipeline to make API calls to Bitbucket REST API and fetch data for your account. 
 
 
 ## Getting started
@@ -18,12 +18,10 @@ Create the repository blueprint in Port [using this json file](./resources/repos
 
 ## Running the Groovy script
 
-Follow these steps to get started with the Groovy template:
-
 1. Create the following as Jenkins Credentials:
 
    1. `BITBUCKET_USERNAME` - a user with access to the BitBucket server.
-   2. `BITBUCKET_APP_PASSWORD` - a password associated with the username with permissions to create repositories.
+   2. `BITBUCKET_APP_PASSWORD` - a password associated with the username with sufficient permissions to read projects and repositories.
    3. `BITBUCKET_HOST` - BitBucket server host such as http://localhost:7990.
    4. `PORT_CLIENT_ID` - Port Client ID.
    5. `PORT_CLIENT_SECRET` - Port Client Secret.
@@ -275,4 +273,9 @@ def fetchPaginatedData(url, def limit=25, def dataKey='values') {
 
 </details>
 
-3. Trigger the action using your preferred configuration.
+The groovy script can be [in this file](./app.gvy)
+
+
+3. Trigger the action using your preferred build configuration.
+
+4. Congratulation. You have exported your Bitbucket projects and repositories to Port using Jenkins.
