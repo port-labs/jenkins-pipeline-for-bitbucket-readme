@@ -273,7 +273,7 @@ def fetchPaginatedData(url, def limit=25, def dataKey='values') {
 
 </details>
 
-The groovy script can be [in this file](./app.gvy)
+The groovy script can be found [in this file](./app.gvy)
 
 
 3. Trigger the action using your preferred build configuration.
