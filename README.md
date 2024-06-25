@@ -2,7 +2,7 @@
 
 ## Overview
 
-In this example, you will create blueprints for `bitbucketProject` `bitbucketRepository` that ingests all projects, repositories and their associated README.md from your Bitbucket account. You will then add some Groovy script to your Jenkins pipeline to make API calls to Bitbucket REST API and fetch data for your account. 
+In this example, you will create blueprints for `bitbucketProject` and `bitbucketRepository` that ingests all projects, repositories and their associated README.md from your Bitbucket account. You will then add some Groovy script to your Jenkins pipeline to make API calls to Bitbucket REST API and fetch data for your account. 
 
 
 ## Getting started
